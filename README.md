@@ -4,13 +4,7 @@ A fast, clean web app to calculate your NPTEL assignment component accurately us
 
 ## Demo Screenshots
 
-<p align="center">
-  <img src="docs/screenshots/home-demo.png" alt="NPTEL Score Checker - Home" width="880" />
-</p>
-
-<p align="center">
-  ![score](https://github.com/user-attachments/assets/61d09620-98fe-4210-ab2d-d6f2fd9824b2)
-</p>
+<img width="1516" height="982" alt="image" src="https://github.com/user-attachments/assets/0ecaad0d-3133-4e18-a5a1-3b96b5540ef2" />
 
 ## Features
 
