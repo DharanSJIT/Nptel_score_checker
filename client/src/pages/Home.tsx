@@ -28,7 +28,7 @@ import {
 } from "@/lib/storage";
 import { Download, History, Menu, RotateCcw, X } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 
 /**
  * Home Page - NPTEL Assignment Score Checker
@@ -425,20 +425,16 @@ export default function Home() {
                 </h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>
-                    <a href="#" className="hover:text-foreground transition-colors">
+                    <Link href="/how-to-calculate" className="hover:text-foreground transition-colors">
                       How to Calculate
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-foreground transition-colors">
+                    <Link href="/nptel-guidelines" className="hover:text-foreground transition-colors">
                       NPTEL Guidelines
-                    </a>
+                    </Link>
                   </li>
-                  <li>
-                    <a href="#" className="hover:text-foreground transition-colors">
-                      FAQ
-                    </a>
-                  </li>
+                  
                 </ul>
               </div>
 
@@ -454,7 +450,7 @@ export default function Home() {
             </div>
 
             <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-border text-center text-xs text-muted-foreground">
-              <p>© 2024 NPTEL Score Calculator. All rights reserved.</p>
+              <p>© 2026 NPTEL Score Calculator. All rights reserved.</p>
             </div>
           </div>
         </div>
