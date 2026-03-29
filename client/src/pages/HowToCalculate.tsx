@@ -17,7 +17,7 @@ export default function HowToCalculate() {
         transition={{ duration: 0.4 }}
       >
         <div className="container py-4 sm:py-6">
-          <div className="max-w-4xl mx-auto flex items-center gap-3">
+          <div className="w-full md:w-[85vw] md:mx-auto flex items-center gap-3">
             <Button
               variant="outline"
               size="icon"

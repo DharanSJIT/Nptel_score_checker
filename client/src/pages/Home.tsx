@@ -166,7 +166,7 @@ export default function Home() {
         transition={{ duration: 0.4 }}
       >
         <div className="container py-4 sm:py-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full md:w-[85vw] md:mx-auto">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <img
