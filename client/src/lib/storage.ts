@@ -14,6 +14,7 @@ export interface SavedCalculation {
 
 const STORAGE_KEY = "nptel_calculations";
 const PREFERENCES_KEY = "nptel_preferences";
+const PENDING_SELECTION_KEY = "nptel_pending_selection";
 
 /**
  * Save a calculation to local storage
@@ -93,6 +94,46 @@ export function exportCalculations(): string {
 }
 
 /**
+ * Export calculations as CSV and trigger browser download
+ */
+export function downloadCalculationsCSV(calculations: SavedCalculation[]): boolean {
+  if (calculations.length === 0) {
+    return false;
+  }
+
+  const data = calculations.map((c) => ({
+    courseName: c.courseName,
+    date: new Date(c.timestamp).toLocaleDateString(),
+    score: c.result.assignmentScore,
+    status: c.result.isPassing ? "Pass" : "Fail",
+    scores: c.result.allScores,
+  }));
+
+  const csv = [
+    ["Course Name", "Date", "Assignment Score", "Status", "Individual Scores"],
+    ...data.map((d) => [
+      d.courseName,
+      d.date,
+      d.score,
+      d.status,
+      d.scores.join(";"),
+    ]),
+  ]
+    .map((row) => row.map((cell) => `"${cell}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `nptel-calculations-${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+
+  return true;
+}
+
+/**
  * Import calculations from JSON
  */
 export function importCalculations(jsonData: string): boolean {
@@ -130,5 +171,39 @@ export function getPreferences(): Record<string, any> {
   } catch (error) {
     console.error("Failed to retrieve preferences:", error);
     return {};
+  }
+}
+
+/**
+ * Persist a selected history calculation ID for pre-filling on Home page
+ */
+export function setPendingCalculation(id: string): void {
+  try {
+    localStorage.setItem(PENDING_SELECTION_KEY, id);
+  } catch (error) {
+    console.error("Failed to save pending selection:", error);
+  }
+}
+
+/**
+ * Read pending history selection
+ */
+export function getPendingCalculation(): string | null {
+  try {
+    return localStorage.getItem(PENDING_SELECTION_KEY);
+  } catch (error) {
+    console.error("Failed to read pending selection:", error);
+    return null;
+  }
+}
+
+/**
+ * Clear pending history selection
+ */
+export function clearPendingCalculation(): void {
+  try {
+    localStorage.removeItem(PENDING_SELECTION_KEY);
+  } catch (error) {
+    console.error("Failed to clear pending selection:", error);
   }
 }

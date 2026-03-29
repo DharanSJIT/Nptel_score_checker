@@ -13,18 +13,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ScoreInput from "@/components/ScoreInput";
 import ResultCard from "@/components/ResultCard";
-import HistoryPanel from "@/components/HistoryPanel";
 import {
   CourseDuration,
   calculateAssignmentScore,
   CalculationResult,
 } from "@/lib/scoreCalculator";
 import {
-  saveCalculation,
+  clearPendingCalculation,
+  downloadCalculationsCSV,
+  getPendingCalculation,
   getCalculations,
   SavedCalculation,
+  saveCalculation,
 } from "@/lib/storage";
-import { RotateCcw, Download } from "lucide-react";
+import { Download, History, Menu, RotateCcw, X } from "lucide-react";
+import logo from "@/assets/logo.png";
+import { useLocation } from "wouter";
 
 /**
  * Home Page - NPTEL Assignment Score Checker
@@ -33,7 +37,7 @@ import { RotateCcw, Download } from "lucide-react";
  * Layout:
  * - Header with title and description
  * - Two-column layout: Input section (left) and Results section (right)
- * - History panel below
+ * - History available on dedicated page
  * - Smooth animations and transitions throughout
  */
 export default function Home() {
@@ -42,19 +46,31 @@ export default function Home() {
   const [scores, setScores] = useState<number[]>(Array(4).fill(0));
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [calculations, setCalculations] = useState<SavedCalculation[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Load calculations from storage on mount
   useEffect(() => {
     const saved = getCalculations();
     setCalculations(saved);
-  }, []);
 
-  // Update scores array when duration changes
-  useEffect(() => {
-    setScores(Array(duration).fill(0));
-    setResult(null);
-  }, [duration]);
+    const pendingId = getPendingCalculation();
+    if (!pendingId) {
+      return;
+    }
+
+    const selected = saved.find((calc) => calc.id === pendingId);
+    clearPendingCalculation();
+
+    if (!selected) {
+      return;
+    }
+
+    setDuration(selected.result.duration);
+    setCourseName(selected.courseName);
+    setScores(selected.result.allScores);
+    setResult(selected.result);
+  }, []);
 
   // Calculate score whenever scores change
   useEffect(() => {
@@ -89,57 +105,35 @@ export default function Home() {
     setResult(null);
   };
 
-  const handleSelectCalculation = (calc: SavedCalculation) => {
-    setDuration(calc.result.duration);
-    setCourseName(calc.courseName);
-    setScores(calc.result.allScores);
-    setResult(calc.result);
-    setShowHistory(false);
-  };
-
-  const handleDeleteCalculation = (id: string) => {
-    setCalculations(calculations.filter((c) => c.id !== id));
+  const handleDurationChange = (value: string) => {
+    const nextDuration = parseInt(value) as CourseDuration;
+    setDuration(nextDuration);
+    setScores(Array(nextDuration).fill(0));
+    setResult(null);
   };
 
   const handleExportCalculations = () => {
-    const data = calculations.map((c) => ({
-      courseName: c.courseName,
-      date: new Date(c.timestamp).toLocaleDateString(),
-      score: c.result.assignmentScore,
-      status: c.result.isPassing ? "Pass" : "Fail",
-      scores: c.result.allScores,
-    }));
-
-    const csv = [
-      ["Course Name", "Date", "Assignment Score", "Status", "Individual Scores"],
-      ...data.map((d) => [
-        d.courseName,
-        d.date,
-        d.score,
-        d.status,
-        d.scores.join(";"),
-      ]),
-    ]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `nptel-calculations-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const exported = downloadCalculationsCSV(calculations);
     
-    // Show success toast
     const event = new CustomEvent("toast", {
-      detail: {
-        title: "Exported",
-        description: "Calculations exported as CSV",
-        type: "success",
-      },
+      detail: exported
+        ? {
+            title: "Exported",
+            description: "Calculations exported as CSV",
+            type: "success",
+          }
+        : {
+            title: "No Data",
+            description: "No calculations to export",
+            type: "info",
+          },
     });
     window.dispatchEvent(event);
+  };
+
+  const handleGoToHistory = () => {
+    setIsMobileMenuOpen(false);
+    setLocation("/history");
   };
 
   const containerVariants = {
@@ -173,36 +167,77 @@ export default function Home() {
       >
         <div className="container py-4 sm:py-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground truncate">
-                  NPTEL Score Calculator
-                </h1>
+                <img
+                  src={logo}
+                  alt="NPTEL Score Calculator"
+                  className="h-10 sm:h-12 w-auto object-contain"
+                />
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Calculate your weighted assignment score accurately
                 </p>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {calculations.length > 0 && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportCalculations}
-                      className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+              <div className="relative flex items-center gap-2 flex-shrink-0 ml-auto">
+                <div className="hidden sm:flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportCalculations}
+                    disabled={calculations.length === 0}
+                    className="gap-2 text-sm px-3"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGoToHistory}
+                    className="gap-2 text-sm px-3"
+                  >
+                    <History className="w-4 h-4" />
+                    History ({calculations.length})
+                  </Button>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="sm:hidden"
+                  onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+                  aria-label="Open menu"
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="w-4 h-4" />
+                  ) : (
+                    <Menu className="w-4 h-4" />
+                  )}
+                </Button>
+
+                {isMobileMenuOpen && (
+                  <div className="sm:hidden absolute right-0 top-12 w-44 rounded-lg border border-border bg-background shadow-lg p-2 z-50">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportCalculations();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      disabled={calculations.length === 0}
+                      className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left hover:bg-secondary/60 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">Export</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowHistory(!showHistory)}
-                      className="text-xs sm:text-sm px-2 sm:px-3"
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGoToHistory}
+                      className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left hover:bg-secondary/60"
                     >
-                      History ({calculations.length})
-                    </Button>
-                  </>
+                      <History className="w-4 h-4" />
+                      History
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -258,9 +293,7 @@ export default function Home() {
                       </Label>
                       <Select
                         value={duration.toString()}
-                        onValueChange={(val) =>
-                          setDuration(parseInt(val) as CourseDuration)
-                        }
+                        onValueChange={handleDurationChange}
                       >
                         <SelectTrigger
                           id="duration"
@@ -361,14 +394,6 @@ export default function Home() {
                 </Card>
               )}
 
-              {/* History Panel */}
-              {showHistory && calculations.length > 0 && (
-                <HistoryPanel
-                  calculations={calculations}
-                  onSelectCalculation={handleSelectCalculation}
-                  onDeleteCalculation={handleDeleteCalculation}
-                />
-              )}
             </motion.div>
           </motion.div>
         </div>
